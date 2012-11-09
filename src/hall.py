@@ -1,14 +1,14 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 from urllib import unquote
 from wsgiref.simple_server import make_server
 import json
 import os
+import signal
 
 from boto.s3.key import Key
 from bottle import Bottle, request, response
 import boto
-
 
 settings = {}
 
@@ -41,21 +41,29 @@ def get(encoded_url):
     response.set_header("content-type", content_type)
     return key.get_contents_as_string()
 
+def stop(unused_signal, unused_frame):
+    exit(0)
+
 def main():
-    global bucket
-    bucket = connection.get_bucket(settings["HOM_BUCKET"])
-    http_server = make_server("", int(settings["HOM_PORT"]), app)
-    http_server.serve_forever()
+    try:
+        signal.signal(signal.SIGINT, stop)
+        signal.signal(signal.SIGTERM, stop)
+        for name in os.environ:
+            if name.startswith("HALL_"):
+                settings[name] = os.environ[name]
+        try:
+            assert "HALL_BUCKET" in settings
+            assert "HALL_PORT" in settings
+        except AssertionError:
+            print("You need to set the environment variables HALL_BUCKET " +
+                  "and HALL_PORT")
+            exit(1)
+        global bucket
+        bucket = connection.get_bucket(settings["HALL_BUCKET"])
+        http_server = make_server("", int(settings["HALL_PORT"]), app)
+        http_server.serve_forever()
+    except KeyboardInterrupt:
+        stop(None, None)
 
 if __name__ == '__main__':
-    for name in os.environ:
-        if name.startswith("HALL_"):
-            settings[name] = os.environ[name]
-    try:
-        assert "HALL_BUCKET" in settings
-        assert "HALL_PORT" in settings
-    except AssertionError:
-        print("You need to set the environment variables HALL_BUCKET " +
-              "and HALL_PORT")
-        exit(1)
     main()

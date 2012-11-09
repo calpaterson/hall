@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -e
+
+PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/..
+
+export HALL_PORT=45454
+export HALL_BUCKET=calpaterson.test
+
+python ${PROJECT_ROOT}/src/hall.py &
+HALL_PID=$!
+trap 'kill $HALL_PID' SIGINT SIGTERM EXIT
+
+sleep 1
+
+python $PROJECT_ROOT/src/tests.py
