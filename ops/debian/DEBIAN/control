@@ -1,0 +1,8 @@
+Version: 0-UNKNOWN
+Package: hall
+Section: web
+Priority: optional
+Architecture: all
+Depends: python2.7 (>= 2.7), python-virtualenv, python-pip, build-essential, python2.7-dev (>= 2.7)
+Maintainer: Cal Paterson <cal@calpaterson.com>
+Description: web service wrapping Amazon s3

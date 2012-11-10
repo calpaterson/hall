@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+
+echo "Building environement..."
+virtualenv --python=python2.7 /var/hall/environment/
+. /var/hall/environment/bin/activate
+pip install /usr/share/hall/bundle.zip
+deactivate
+echo "...done"
+echo "Now configure hall in /etc/hall.conf"

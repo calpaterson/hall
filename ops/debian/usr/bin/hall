@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -e
+
+source /var/hall/environment/bin/activate
+source /etc/hall.conf
+python2.7 /usr/share/hall/hall.py

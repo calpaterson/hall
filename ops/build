@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -e
+set -x
+
+OPS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+BUILD_DIR=$OPS_DIR/build.d
+PROJECT_ROOT=$OPS_DIR/..
+
+create_build_directory () {
+    if [[ -d $BUILD_DIR ]]
+    then
+	rm -rf $BUILD_DIR
+    fi
+    cp -Rv $OPS_DIR/debian/ $BUILD_DIR
+}
+
+set_version () {
+    LAST_VERSION=0 #`git tag --list | sort -rV | head -n 1`
+    export VERSION=`expr $LAST_VERSION + 1`
+    sed -i "s/0-UNKNOWN/${VERSION}/" $OPS_DIR/build.d/DEBIAN/control
+}
+
+insert_python_bundle () {
+    if [[ ! -f $OPS_DIR/artefacts/requirements.md5 ]]
+    then
+	touch $OPS_DIR/artefacts/requirements.md5
+    fi
+    EXPECTED=`md5sum $PROJECT_ROOT/requirements`
+    SUM=`cat $OPS_DIR/artefacts/requirements.md5`
+    if [[ $EXPECTED != $SUM ]]
+    then
+	pip bundle $BUILD_DIR/usr/share/hall/bundle.zip -r $PROJECT_ROOT/requirements
+	cp $BUILD_DIR/usr/share/hall/bundle.zip $OPS_DIR/artefacts/bundle.zip
+	md5sum $PROJECT_ROOT/requirements > $OPS_DIR/artefacts/requirements.md5
+    else
+	echo "REUSING OLD BUNDLE"
+	cp $OPS_DIR/artefacts/bundle.zip $BUILD_DIR/usr/share/hall/bundle.zip
+    fi
+}
+
+insert_python_resources () {
+    cp $PROJECT_ROOT/src/hall.py $BUILD_DIR/usr/share/hall/
+}
+
+clean_out_temporary_files () {
+    find $OPS_DIR/debian/ -name '*~' -exec rm '{}' ';'
+}
+
+remove_gitignores () {
+    rm `find $BUILD_DIR -name '*gitignore*'`
+}
+
+build_artefact () {
+    rm $OPS_DIR/artefacts/*deb # FIXME
+    if [[ ! $BUILD_NUMBER ]]
+    then
+	PREVIOUS_DEV_BUILD=$OPS_DIR/artefacts/hall_0-DEV_all.deb
+	if [[ -f $PREVIOUS_DEV_BUILD ]]
+	then
+	    rm $PREVIOUS_DEV_BUILD
+	fi
+    fi
+    fakeroot dpkg-deb --build $BUILD_DIR $OPS_DIR/artefacts/hall.deb
+    dpkg-name $OPS_DIR/artefacts/hall.deb
+}
+
+create_build_directory
+set_version
+insert_python_bundle
+insert_python_resources
+clean_out_temporary_files
+remove_gitignores
+build_artefact
